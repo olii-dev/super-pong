@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Pong</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --p1-color: #4299e1;
+            --p2-color: #f56565;
+        }
+        
+        body {
+            background-color: #1a202c;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 100%;
+            height: auto;
+        }
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+        }
+        .score-display {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: clamp(40px, 10vw, 80px);
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+        .player1-score {
+            color: var(--p1-color);
+            font-weight: bold;
+        }
+        .player2-score {
+            color: var(--p2-color);
+            font-weight: bold;
+        }
+        .controls-outer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 12px 25px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            width: 800px;
+            max-width: 95vw;
+        }
+        .controls-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .customization-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding-top: 8px;
+            gap: 20px;
+        }
+        .theme-selector, .paddle-customization, .ai-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .ai-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ai-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .paddle-customization {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .paddle-select {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        select {
+            background-color: #2d3748;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 3px 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        select:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+        }
+        select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        select:disabled + label {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        input[type="checkbox"] {
+            cursor: pointer;
+            margin-right: 2px;
+        }
+        input[type="checkbox"]:disabled + label {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .player1-score, .player2-score {
+            position: relative;
+        }
+        .winner-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: min(2rem, 7vw);
+            display: none;
+            text-align: center;
+            z-index: 10;
+            width: 80%;
+            max-width: 400px;
+        }
+        .winner-message button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        .winner-message button:hover {
+            background-color: #2d3748;
+        }
+        .pause-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: min(2rem, 7vw);
+            display: none;
+            text-align: center;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            width: 80%;
+            max-width: 400px;
+        }
+        .pause-tip {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Splash Screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+        
+        .splash-logo {
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 2rem;
+            text-align: center;
+            line-height: 1.2;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .splash-logo span {
+            display: inline-block;
+        }
+        
+        .splash-logo .red {
+            color: var(--p2-color);
+        }
+        
+        .splash-logo .blue {
+            color: var(--p1-color);
+        }
+        
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+        
+        /* Instructions */
+        .instructions-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            z-index: 100;
+            width: 90%;
+            max-width: 600px;
+            display: none;
+        }
+        
+        .instructions-overlay h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #f7f7f7;
+            text-align: center;
+        }
+        
+        .instructions-overlay p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .instructions-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        /* Audio toggle */
+        .audio-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 50;
+        }
+        
+        .audio-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        
+        /* Particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.8;
+            z-index: 5;
+        }
+        
+        /* Floating settings button and panel */
+        .settings-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .settings-panel {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 49;
+            min-width: 200px;
+            display: none;
+        }
+        
+        .settings-panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: white;
+        }
+        
+        .settings-option {
+            margin-bottom: 10px;
+        }
+        
+        .settings-option label {
+            display: block;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Touch controls styling */
+        .touch-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .touch-up-p1, .touch-down-p1, .touch-up-p2, .touch-down-p2 {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .touch-up-p1::after, .touch-down-p1::after, .touch-up-p2::after, .touch-down-p2::after {
+            content: '';
+            border: solid white;
+            border-width: 0 4px 4px 0;
+            display: inline-block;
+            padding: 6px;
+            transform: rotate(-135deg);
+        }
+        
+        .touch-down-p1::after, .touch-down-p2::after {
+            transform: rotate(45deg);
+        }
+        
+        .touch-up-p1 {
+            left: 20px;
+            bottom: 110px;
+        }
+        
+        .touch-down-p1 {
+            left: 20px;
+            bottom: 20px;
+        }
+        
+        .touch-up-p2 {
+            right: 20px;
+            bottom: 110px;
+        }
+        
+        .touch-down-p2 {
+            right: 20px;
+            bottom: 20px;
+        }
+        
+        /* Stats styles */
+        .stats-container {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+        }
+        
+        .stat-item {
+            margin: 0 10px;
+        }
+        
+        /* Share dialog */
+        .share-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 1000;
+            width: 90%;
+            max-width: 400px;
+            display: none;
+        }
+        
+        .share-dialog h2 {
+            color: white;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .share-dialog p {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 15px;
+        }
+        
+        .share-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .share-button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            color: white;
+        }
+        
+        .twitter-button {
+            background-color: #1DA1F2;
+        }
+        
+        .facebook-button {
+            background-color: #4267B2;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        /* Visual flare */
+        @keyframes glow {
+            0% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+            100% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen gap-2 px-2">
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-logo">
+            <span class="blue">SUPER</span> <span class="red">PONG</span>
+        </div>
+        <div class="loader"></div>
+        <div class="loading-text">Loading game...</div>
+    </div>
+    
+    <!-- Instructions Overlay -->
+    <div class="instructions-overlay" id="instructionsOverlay">
+        <h2>How to Play Super Pong</h2>
+        <p><strong>Controls:</strong></p>
+        <p>Player 1: W (up) / S (down)</p>
+        <p>Player 2: Arrow Up / Arrow Down</p>
+        <p>Space: Pause Game</p>
+        <p><strong>Objective:</strong> Score 5 points to win! Don't let the ball pass your paddle.</p>
+        <p><strong>Tips:</strong> Hit the ball with different parts of the paddle to change its direction and speed.</p>
+        <div class="instructions-actions">
+            <button id="startGameButton" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded">Start Game</button>
+        </div>
+    </div>
+    
+    <!-- Audio Toggle -->
+    <div class="audio-toggle" id="audioToggle">
+        <svg viewBox="0 0 24 24" id="audioIcon">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+    </div>
+    
+    <!-- Settings Button and Panel -->
+    <div class="settings-button" id="settingsButton">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
+            <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+        </svg>
+    </div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <h3>Game Settings</h3>
+        <div class="settings-option">
+            <label for="winningScoreSelect">Points to Win:</label>
+            <select id="winningScoreSelect" class="w-full">
+                <option value="3">3 Points</option>
+                <option value="5" selected>5 Points</option>
+                <option value="7">7 Points</option>
+                <option value="10">10 Points</option>
+            </select>
+        </div>
+        <div class="settings-option">
+            <label for="ballSpeedSelect">Ball Speed:</label>
+            <select id="ballSpeedSelect" class="w-full">
+                <option value="slow">Slow</option>
+                <option value="normal" selected>Normal</option>
+                <option value="fast">Fast</option>
+            </select>
+        </div>
+        <div class="settings-option">
+            <button id="showInstructions" class="bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded w-full">Show Instructions</button>
+        </div>
+    </div>
+    
+    <div class="controls-outer">
+        <div class="controls-section">
+            <div>P1: W/S</div>
+            <div>P2: ↑/↓</div>
+            <div>Space: Pause</div>
+        </div>
+        
+        <div class="customization-section">
+            <div class="ai-controls">
+                <div class="ai-toggle">
+                    <input type="checkbox" id="ai-mode" />
+                    <label for="ai-mode">AI Mode</label>
+                </div>
+                <div class="ai-difficulty">
+                    <label for="ai-difficulty">Difficulty:</label>
+                    <select id="ai-difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="theme-selector">
+                <label for="theme-select">Theme:</label>
+                <select id="theme-select">
+                    <option value="dark">Dark</option>
+                    <option value="neon">Neon</option>
+                    <option value="retro">Retro</option>
+                    <option value="sunset">Sunset</option>
+                </select>
+            </div>
+            
+            <div class="paddle-customization">
+                <div class="paddle-select">
+                    <label for="p1-color">Left:</label>
+                    <select id="p1-color">
+                        <option value="blue">Blue</option>
+                        <option value="red">Red</option>
+                        <option value="green">Green</option>
+                        <option value="purple">Purple</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="orange">Orange</option>
+                    </select>
+                </div>
+                <div class="paddle-select">
+                    <label for="p2-color">Right:</label>
+                    <select id="p2-color">
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="purple">Purple</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="orange">Orange</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <div class="score-display">
+            <div class="player1-score"><span id="score1">0</span></div>
+            <div class="player2-score"><span id="score2">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="winner-message" id="winnerMessage">
+            <div id="winnerText"></div>
+            <div id="finalScore" class="text-lg mb-4"></div>
+            <button id="playAgain" class="mb-2">Play Again</button>
+            <button id="shareScore" class="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded">Share Score</button>
+        </div>
+        
+        <div class="pause-message" id="pauseMessage">
+            <div>GAME PAUSED</div>
+            <div class="pause-tip">Press Space to resume</div>
+        </div>
+    </div>
+    
+    <!-- Touch Controls for Mobile -->
+    <div class="touch-controls hidden">
+        <div class="touch-up-p1" id="touchUpP1"></div>
+        <div class="touch-down-p1" id="touchDownP1"></div>
+        <div class="touch-up-p2" id="touchUpP2"></div>
+        <div class="touch-down-p2" id="touchDownP2"></div>
+    </div>
+    
+    <!-- Audio Elements -->
+    <audio id="paddleHitSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2047/2047-preview.mp3" type="audio/mp3">
+    </audio>
+    <audio id="wallHitSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2661/2661-preview.mp3" type="audio/mp3">
+    </audio>
+    <audio id="scoreSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2617/2617-preview.mp3" type="audio/mp3">
+    </audio>
+    <audio id="winSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/254/254-preview.mp3" type="audio/mp3">
+    </audio>
+    <audio id="gameMusic" loop preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3" type="audio/mp3">
+    </audio>
+    
+    <!-- Share Dialog -->
+    <div class="share-dialog" id="shareDialog">
+        <button class="close-button" id="closeShareDialog">&times;</button>
+        <h2>Share Your Score!</h2>
+        <p id="shareMessage">I just scored X points in Super Pong!</p>
+        <div class="share-buttons">
+            <button class="share-button" id="copyLinkButton" style="background-color: #333; width: 150px;">Copy Score to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const PADDLE_WIDTH = 15;
+        const PADDLE_HEIGHT = 100;
+        const BALL_SIZE = 15;
+        let WINNING_SCORE = 5;
+        
+        // Game variables
+        let canvas, ctx;
+        let player1Y, player2Y;
+        let ballX, ballY, ballSpeedX, ballSpeedY;
+        let player1Score = 0;
+        let player2Score = 0;
+        let gameRunning = true;
+        let gameStarted = false;
+        let gamePaused = false;
+        let aiMode = false;
+        let aiDifficulty = 'medium'; // 'easy', 'medium', 'hard'
+        let soundEnabled = true;
+        let musicPlaying = false;
+        let ballSpeedMultiplier = 1;
+        const MAX_BALL_SPEED_X = 12; // Maximum horizontal ball speed
+        let touchControlsActive = false;
+        let isMobile = false;
+        let consecutiveHits = 0;
+        let maxConsecutiveHits = 0;
+        let longestRally = 0;
+        let currentRally = 0;
+        let particles = [];
+        let gameStats = {
+            rallies: 0,
+            paddleHits: 0,
+            wallHits: 0,
+            maxSpeed: 0
+        };
+        
+        // Theme and customization variables
+        const themes = {
+            dark: {
+                background: '#111',
+                ball: '#ffffff',
+                centerLine: 'rgba(255, 255, 255, 0.2)',
+                glow: '0 0 10px rgba(255, 255, 255, 0.7)'
+            },
+            neon: {
+                background: '#000',
+                ball: '#0ff',
+                centerLine: 'rgba(0, 255, 255, 0.3)',
+                glow: '0 0 15px rgba(0, 255, 255, 0.9)'
+            },
+            retro: {
+                background: '#222034',
+                ball: '#f4f4f4',
+                centerLine: 'rgba(244, 244, 244, 0.3)',
+                glow: '0 0 8px rgba(244, 244, 244, 0.6)'
+            },
+            sunset: {
+                background: '#1a0033',
+                ball: '#ff9900',
+                centerLine: 'rgba(255, 153, 0, 0.3)',
+                glow: '0 0 12px rgba(255, 153, 0, 0.7)'
+            }
+        };
+        
+        const paddleColors = {
+            blue: '#4299e1',
+            red: '#f56565',
+            green: '#48bb78',
+            purple: '#9f7aea',
+            yellow: '#ecc94b',
+            orange: '#ed8936'
+        };
+        
+        let currentTheme = 'dark';
+        let player1PaddleColor = 'blue';
+        let player2PaddleColor = 'red';
+        
+        // Score animation variables
+        let scoreAnimations = {
+            player1: { active: false, value: 0, opacity: 0, y: 0 },
+            player2: { active: false, value: 0, opacity: 0, y: 0 }
+        };
+        
+        // Initialize game
+        function init() {
+            // Check if device is mobile
+            checkMobile();
+            
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Make sure canvas keeps aspect ratio
+            handleCanvasSize();
+            
+            // Center paddles vertically
+            player1Y = canvas.height / 2 - PADDLE_HEIGHT / 2;
+            player2Y = canvas.height / 2 - PADDLE_HEIGHT / 2;
+            
+            // Center ball and give it random direction
+            resetBall();
+            
+            // Set up keyboard controls
+            document.addEventListener('keydown', keyDownHandler);
+            document.addEventListener('keyup', keyUpHandler);
+            
+            // Set up play again button
+            document.getElementById('playAgain').addEventListener('click', resetGame);
+            document.getElementById('shareScore').addEventListener('click', showShareDialog);
+            
+            // Set up instructions and splash screen
+            document.getElementById('startGameButton').addEventListener('click', startGame);
+            document.getElementById('showInstructions').addEventListener('click', showInstructions);
+            
+            // Set up settings
+            document.getElementById('winningScoreSelect').addEventListener('change', updateWinningScore);
+            document.getElementById('ballSpeedSelect').addEventListener('change', updateBallSpeed);
+            
+            // Handle window resize
+            window.addEventListener('resize', handleCanvasSize);
+            
+            // Audio toggle
+            document.getElementById('audioToggle').addEventListener('click', toggleAudio);
+            
+            // Settings panel toggle
+            document.getElementById('settingsButton').addEventListener('click', toggleSettingsPanel);
+            
+            // Set up share dialog actions
+            document.getElementById('closeShareDialog').addEventListener('click', closeShareDialog);
+            document.getElementById('copyLinkButton').addEventListener('click', copyShareLink);
+            
+            // Set up touch controls if on mobile
+            if (isMobile) {
+                setupTouchControls();
+            }
+            
+            // Start game loop
+            setInterval(gameLoop, 16);
+            
+            // Show splash screen and then instructions
+            setTimeout(() => {
+                document.getElementById('splashScreen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('splashScreen').style.display = 'none';
+                    showInstructions();
+                }, 500);
+            }, 2000);
+        }
+        
+        // Check if on mobile device
+        function checkMobile() {
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                document.querySelector('.touch-controls').classList.remove('hidden');
+            }
+        }
+        
+        // Set up touch controls
+        function setupTouchControls() {
+            touchControlsActive = true;
+            
+            const touchUpP1 = document.getElementById('touchUpP1');
+            const touchDownP1 = document.getElementById('touchDownP1');
+            const touchUpP2 = document.getElementById('touchUpP2');
+            const touchDownP2 = document.getElementById('touchDownP2');
+            
+            // Player 1 controls
+            touchUpP1.addEventListener('touchstart', () => keys.w = true);
+            touchUpP1.addEventListener('touchend', () => keys.w = false);
+            touchDownP1.addEventListener('touchstart', () => keys.s = true);
+            touchDownP1.addEventListener('touchend', () => keys.s = false);
+            
+            // Player 2 controls (only visible if AI is off)
+            touchUpP2.addEventListener('touchstart', () => keys.ArrowUp = true);
+            touchUpP2.addEventListener('touchend', () => keys.ArrowUp = false);
+            touchDownP2.addEventListener('touchstart', () => keys.ArrowDown = true);
+            touchDownP2.addEventListener('touchend', () => keys.ArrowDown = false);
+            
+            // Update visibility based on AI mode
+            updateTouchControlsVisibility();
+        }
+        
+        // Update visibility of touch controls based on AI mode
+        function updateTouchControlsVisibility() {
+            if (!touchControlsActive) return;
+            
+            const touchUpP2 = document.getElementById('touchUpP2');
+            const touchDownP2 = document.getElementById('touchDownP2');
+            
+            if (aiMode) {
+                touchUpP2.style.display = 'none';
+                touchDownP2.style.display = 'none';
+            } else {
+                touchUpP2.style.display = 'flex';
+                touchDownP2.style.display = 'flex';
+            }
+        }
+        
+        // Show instructions
+        function showInstructions() {
+            document.getElementById('instructionsOverlay').style.display = 'block';
+            document.getElementById('settingsPanel').style.display = 'none';
+        }
+        
+        // Start game from instructions screen
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('instructionsOverlay').style.display = 'none';
+            resetGame();
+            
+            // Play music if audio is enabled
+            if (soundEnabled && !musicPlaying) {
+                document.getElementById('gameMusic').play().catch(error => {
+                    // Auto-play might be blocked, do nothing
+                });
+                musicPlaying = true;
+            }
+        }
+        
+        // Toggle audio
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            
+            // Update icon
+            const audioIcon = document.getElementById('audioIcon');
+            if (!soundEnabled) {
+                audioIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+                document.getElementById('gameMusic').pause();
+                musicPlaying = false;
+            } else {
+                audioIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+                if (gameStarted && !gamePaused) {
+                    document.getElementById('gameMusic').play().catch(error => {
+                        // Auto-play might be blocked, do nothing
+                    });
+                    musicPlaying = true;
+                }
+            }
+        }
+        
+        // Play sound if enabled
+        function playSound(soundId) {
+            if (soundEnabled) {
+                const sound = document.getElementById(soundId);
+                sound.currentTime = 0;
+                sound.play().catch(error => {
+                    // Auto-play might be blocked, do nothing
+                });
+            }
+        }
+        
+        // Toggle settings panel
+        function toggleSettingsPanel() {
+            const panel = document.getElementById('settingsPanel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+            }
+        }
+        
+        // Update winning score
+        function updateWinningScore(e) {
+            WINNING_SCORE = parseInt(e.target.value);
+        }
+        
+        // Update ball speed
+        function updateBallSpeed(e) {
+            switch (e.target.value) {
+                case 'slow':
+                    ballSpeedMultiplier = 0.75;
+                    break;
+                case 'normal':
+                    ballSpeedMultiplier = 1;
+                    break;
+                case 'fast':
+                    ballSpeedMultiplier = 1.5;
+                    break;
+                default:
+                    ballSpeedMultiplier = 1;
+            }
+            
+            // Apply to current ball if game is running
+            if (gameRunning && !gamePaused) {
+                let baseSpeed = 3 * ballSpeedMultiplier;
+                baseSpeed = Math.min(baseSpeed, MAX_BALL_SPEED_X * ballSpeedMultiplier);
+                
+                ballSpeedX = ballSpeedX > 0 ? baseSpeed : -baseSpeed;
+                ballSpeedY = ballSpeedY * ballSpeedMultiplier;
+            }
+        }
+        
+        // Handle canvas responsive sizing
+        function handleCanvasSize() {
+            const container = document.querySelector('.game-container');
+            const containerWidth = Math.min(800, container.clientWidth);
+            
+            // Maintain aspect ratio (800x500 = 1.6)
+            const aspectRatio = 1.6;
+            
+            // Only adjust if needed
+            if (containerWidth < 800) {
+                canvas.style.width = containerWidth + 'px';
+                canvas.style.height = (containerWidth / aspectRatio) + 'px';
+            }
+        }
+        
+        // Draw all game elements at their current positions
+        function drawGameElements() {
+            // Apply current theme
+            const theme = themes[currentTheme];
+            
+            // Draw center line
+            ctx.strokeStyle = theme.centerLine;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            
+            // Draw paddles with glow effect
+            drawPaddle(20, player1Y, PADDLE_WIDTH, PADDLE_HEIGHT, paddleColors[player1PaddleColor]);
+            drawPaddle(canvas.width - 20 - PADDLE_WIDTH, player2Y, PADDLE_WIDTH, PADDLE_HEIGHT, paddleColors[player2PaddleColor]);
+            
+            // Draw particles
+            drawAndUpdateParticles();
+            
+            // Draw ball with glow effect
+            drawBall(ballX, ballY, BALL_SIZE, theme.ball);
+            
+            // Draw rally counter if in a rally
+            if (currentRally > 0) {
+                ctx.save();
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fillText(`Rally: ${currentRally}`, canvas.width / 2, 30);
+                ctx.restore();
+            }
+            
+            // Draw consecutive hits counter if active
+            if (consecutiveHits > 1) {
+                ctx.save();
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = getConsecutiveHitsColor(consecutiveHits);
+                ctx.fillText(`${consecutiveHits}x`, canvas.width / 2, canvas.height - 20);
+                ctx.restore();
+            }
+            
+            // Draw score animation if active
+            if (scoreAnimations.player1.active) {
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 255, 255, ${scoreAnimations.player1.opacity})`;
+                ctx.font = 'bold 36px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    '+1', 
+                    canvas.width / 4, 
+                    canvas.height / 2 - scoreAnimations.player1.y
+                );
+                ctx.restore();
+            }
+            
+            if (scoreAnimations.player2.active) {
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 255, 255, ${scoreAnimations.player2.opacity})`;
+                ctx.font = 'bold 36px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    '+1', 
+                    canvas.width * 3/4, 
+                    canvas.height / 2 - scoreAnimations.player2.y
+                );
+                ctx.restore();
+            }
+        }
+        
+        // Draw a paddle with glow effect
+        function drawPaddle(x, y, width, height, color) {
+            ctx.save();
+            
+            // Add glow effect
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            
+            // Draw paddle
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+            
+            // Add a highlight
+            const gradient = ctx.createLinearGradient(x, y, x + width, y);
+            gradient.addColorStop(0, "rgba(255, 255, 255, 0.5)");
+            gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, y, width, 10);
+            
+            ctx.restore();
+        }
+        
+        // Draw ball with glow effect
+        function drawBall(x, y, size, color) {
+            ctx.save();
+            
+            // Calculate speed for visual effects
+            const speed = Math.sqrt(ballSpeedX * ballSpeedX + ballSpeedY * ballSpeedY);
+            const normalizedSpeed = Math.min(speed / 15, 1); // Cap at 15 units of speed
+            
+            // Add speed-based glow effect
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10 + (normalizedSpeed * 15);
+            
+            // Draw ball
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add motion trail/blur effect for high speeds
+            if (speed > 5) {
+                const trailLength = normalizedSpeed * 3;
+                ctx.globalAlpha = 0.3 * normalizedSpeed;
+                ctx.beginPath();
+                ctx.arc(x - ballSpeedX * trailLength, y - ballSpeedY * trailLength, size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (speed > 8) {
+                    ctx.globalAlpha = 0.15 * normalizedSpeed;
+                    ctx.beginPath();
+                    ctx.arc(x - ballSpeedX * trailLength * 2, y - ballSpeedY * trailLength * 2, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            ctx.restore();
+            
+            // Update max speed stat
+            if (speed > gameStats.maxSpeed) {
+                gameStats.maxSpeed = speed;
+            }
+        }
+        
+        // Create particles
+        function createParticles(x, y, count, color, speedMultiplier = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 * speedMultiplier;
+                
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 4 + 1,
+                    color: color || '#ffffff',
+                    life: Math.random() * 20 + 10
+                });
+            }
+        }
+        
+        // Draw and update particles
+        function drawAndUpdateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                
+                // Draw particle
+                ctx.globalAlpha = p.life / 30; // Fade out as life reduces
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                // Remove dead particles
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Get color based on consecutive hits
+        function getConsecutiveHitsColor(hits) {
+            if (hits >= 10) return '#ff0000';
+            if (hits >= 7) return '#ff9900';
+            if (hits >= 5) return '#ffff00';
+            if (hits >= 3) return '#00ff00';
+            return 'rgba(255, 255, 255, 0.8)';
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameRunning || !gameStarted) return;
+            
+            // Clear canvas with current theme background
+            ctx.fillStyle = themes[currentTheme].background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Don't update game state if paused
+            if (gamePaused) {
+                // Still draw everything in current state
+                drawGameElements();
+                return;
+            }
+            
+            // Update score animations
+            updateScoreAnimations();
+            
+            drawGameElements();
+            
+            // Move ball
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+            
+            // Ball collision with top and bottom walls
+            if (ballY - BALL_SIZE < 0) {
+                ballY = BALL_SIZE; // Prevent sticking to wall
+                ballSpeedY = Math.abs(ballSpeedY);
+                handleWallCollision('top');
+            } else if (ballY + BALL_SIZE > canvas.height) {
+                ballY = canvas.height - BALL_SIZE; // Prevent sticking to wall
+                ballSpeedY = -Math.abs(ballSpeedY);
+                handleWallCollision('bottom');
+            }
+            
+            // Ball collision with paddles
+            // Player 1 paddle
+            if (ballX - BALL_SIZE < 20 + PADDLE_WIDTH && 
+                ballX - BALL_SIZE > 20 && 
+                ballY > player1Y && 
+                ballY < player1Y + PADDLE_HEIGHT) {
+                
+                // Calculate angle based on where ball hits paddle
+                let hitPosition = (ballY - player1Y) / PADDLE_HEIGHT;
+                let deltaY = (hitPosition - 0.5) * 2; // Convert to range -1 to 1
+                
+                // Increase speed with each hit, but cap at maximum speed
+                let newSpeedX = Math.abs(ballSpeedX) * 1.05 * ballSpeedMultiplier;
+                ballSpeedX = Math.min(newSpeedX, MAX_BALL_SPEED_X * ballSpeedMultiplier);
+                ballSpeedY = deltaY * 7;
+                
+                // Prevent ball from getting stuck against paddle
+                ballX = 20 + PADDLE_WIDTH + BALL_SIZE;
+                
+                handlePaddleHit('player1', hitPosition);
+            }
+            
+            // Player 2 paddle
+            if (ballX + BALL_SIZE > canvas.width - 20 - PADDLE_WIDTH && 
+                ballX + BALL_SIZE < canvas.width - 20 && 
+                ballY > player2Y && 
+                ballY < player2Y + PADDLE_HEIGHT) {
+                
+                // Calculate angle based on where ball hits paddle
+                let hitPosition = (ballY - player2Y) / PADDLE_HEIGHT;
+                let deltaY = (hitPosition - 0.5) * 2; // Convert to range -1 to 1
+                
+                // Increase speed with each hit, but cap at maximum speed
+                let newSpeedX = Math.abs(ballSpeedX) * 1.05 * ballSpeedMultiplier;
+                ballSpeedX = -Math.min(newSpeedX, MAX_BALL_SPEED_X * ballSpeedMultiplier);
+                ballSpeedY = deltaY * 7;
+                
+                // Prevent ball from getting stuck against paddle
+                ballX = canvas.width - 20 - PADDLE_WIDTH - BALL_SIZE;
+                
+                handlePaddleHit('player2', hitPosition);
+            }
+            
+            // Ball out of bounds - score points
+            if (ballX < -BALL_SIZE) {
+                player2Score++;
+                document.getElementById('score2').textContent = player2Score;
+                triggerScoreAnimation('player2');
+                handleScore('player2');
+                checkWinner();
+                resetBall();
+                updateAIControlsState(); // Disable AI toggle after first point
+            } else if (ballX > canvas.width + BALL_SIZE) {
+                player1Score++;
+                document.getElementById('score1').textContent = player1Score;
+                triggerScoreAnimation('player1');
+                handleScore('player1');
+                checkWinner();
+                resetBall();
+                updateAIControlsState(); // Disable AI toggle after first point
+            }
+        }
+        
+        // Handle paddle hit
+        function handlePaddleHit(player, hitPosition) {
+            // Play sound effect
+            playSound('paddleHitSound');
+            
+            // Create particles at hit position
+            const x = player === 'player1' ? 
+                20 + PADDLE_WIDTH : 
+                canvas.width - 20 - PADDLE_WIDTH;
+            
+            createParticles(x, ballY, 10, 
+                player === 'player1' ? 
+                paddleColors[player1PaddleColor] : 
+                paddleColors[player2PaddleColor], 1.5);
+            
+            // Increase consecutive hits counter
+            consecutiveHits++;
+            maxConsecutiveHits = Math.max(maxConsecutiveHits, consecutiveHits);
+            
+            // Increase rally counter
+            currentRally++;
+            
+            // Update stats
+            gameStats.paddleHits++;
+        }
+        
+        // Handle wall collision
+        function handleWallCollision(wall) {
+            // Create particles at hit position (no sound)
+            const y = wall === 'top' ? 0 : canvas.height;
+            createParticles(ballX, y, 5, '#ffffff');
+            
+            // Update stats
+            gameStats.wallHits++;
+        }
+        
+        // Handle scoring
+        function handleScore(player) {
+            // Play score sound
+            playSound('scoreSound');
+            
+            // Create particles explosion from scoring position
+            const x = player === 'player1' ? canvas.width : 0;
+            createParticles(x, ballY, 30, 
+                player === 'player1' ? 
+                paddleColors[player1PaddleColor] : 
+                paddleColors[player2PaddleColor], 2);
+            
+            // Update rally stats if rally was happening
+            if (currentRally > 0) {
+                longestRally = Math.max(longestRally, currentRally);
+                gameStats.rallies++;
+                currentRally = 0;
+            }
+            
+            // Reset consecutive hits
+            consecutiveHits = 0;
+        }
+        
+        // Reset ball to center with random direction
+        function resetBall() {
+            if (!gameRunning) return;
+            
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            
+            // Add a slight delay before launching the ball
+            setTimeout(() => {
+                if (gameRunning && !gamePaused) {
+                    // Random direction but always towards one player
+                    // Initial speed is reasonable and well below max speed
+                    let initialSpeed = 3 * ballSpeedMultiplier;
+                    ballSpeedX = (Math.random() > 0.5 ? initialSpeed : -initialSpeed);
+                    ballSpeedY = (Math.random() * 4 - 2) * ballSpeedMultiplier; // Between -2 and 2
+                    
+                    // Create a burst of particles when ball launches
+                    createParticles(ballX, ballY, 15, themes[currentTheme].ball);
+                }
+            }, 1000);
+            
+            // Reset consecutive hits
+            consecutiveHits = 0;
+        }
+        
+        // Check if a player has won
+        function checkWinner() {
+            if (player1Score >= WINNING_SCORE) {
+                endGame(aiMode ? "You Win!" : "Player 1 Wins!");
+            } else if (player2Score >= WINNING_SCORE) {
+                endGame(aiMode ? "AI Wins!" : "Player 2 Wins!");
+            }
+        }
+        
+        // End the game and show winner
+        function endGame(winner) {
+            gameRunning = false;
+            
+            // Play win sound
+            playSound('winSound');
+            
+            // Display winner message
+            document.getElementById('winnerText').textContent = winner;
+            
+            // Show game stats
+            const finalScoreText = `${player1Score} - ${player2Score}`;
+            document.getElementById('finalScore').textContent = `Final Score: ${finalScoreText}`;
+            document.getElementById('finalScore').innerHTML += `<br><span class="text-sm mt-2 block">Longest Rally: ${longestRally} • Max Combo: ${maxConsecutiveHits}x</span>`;
+            
+            // Show winner message
+            document.getElementById('winnerMessage').style.display = 'block';
+            
+            // Create celebration particles
+            createVictoryParticles();
+            
+            // Re-enable AI toggle when game ends
+            updateAIControlsState();
+        }
+        
+        // Create victory celebration particles
+        function createVictoryParticles() {
+            const colors = [
+                '#ff0000', '#ffff00', '#00ff00', 
+                '#0000ff', '#ff00ff', '#00ffff'
+            ];
+            
+            for (let i = 0; i < 150; i++) {
+                setTimeout(() => {
+                    if (document.getElementById('winnerMessage').style.display === 'block') {
+                        const x = Math.random() * canvas.width;
+                        const y = Math.random() * canvas.height;
+                        createParticles(
+                            x, y, 
+                            1, 
+                            colors[Math.floor(Math.random() * colors.length)], 
+                            3
+                        );
+                    }
+                }, i * 50);
+            }
+        }
+        
+        // Share dialog functions
+        function showShareDialog() {
+            // Create share message
+            const winner = player1Score > player2Score ? 
+                (aiMode ? "I" : "Player 1") : 
+                (aiMode ? "AI" : "Player 2");
+            
+            const scoreText = `${player1Score}-${player2Score}`;
+            const message = `${winner} won ${scoreText} in Super Pong! Longest rally: ${longestRally}, Max combo: ${maxConsecutiveHits}x`;
+            
+            document.getElementById('shareMessage').textContent = message;
+            document.getElementById('shareDialog').style.display = 'block';
+        }
+        
+        function closeShareDialog() {
+            document.getElementById('shareDialog').style.display = 'none';
+        }
+        
+        function copyShareLink() {
+            const message = document.getElementById('shareMessage').textContent;
+            navigator.clipboard.writeText(message)
+                .then(() => {
+                    const button = document.getElementById('copyLinkButton');
+                    button.textContent = 'Copied!';
+                    setTimeout(() => {
+                        button.textContent = 'Copy Score to Clipboard';
+                    }, 2000);
+                });
+        }
+        
+        // Reset the entire game
+        function resetGame() {
+            player1Score = 0;
+            player2Score = 0;
+            document.getElementById('score1').textContent = '0';
+            document.getElementById('score2').textContent = '0';
+            document.getElementById('winnerMessage').style.display = 'none';
+            gameRunning = true;
+            
+            // Reset gameplay stats
+            currentRally = 0;
+            consecutiveHits = 0;
+            gameStats = {
+                rallies: 0,
+                paddleHits: 0,
+                wallHits: 0,
+                maxSpeed: 0
+            };
+            
+            // Clear any existing particles
+            particles = [];
+            
+            // Reset ball
+            resetBall();
+            
+            // Enable AI controls when starting a fresh game
+            updateAIControlsState();
+            
+            // Update touch controls visibility if needed
+            if (touchControlsActive) {
+                updateTouchControlsVisibility();
+            }
+            
+            // Resume music if it was enabled
+            if (soundEnabled && !musicPlaying) {
+                document.getElementById('gameMusic').play().catch(error => {
+                    // Auto-play might be blocked, do nothing
+                });
+                musicPlaying = true;
+            }
+        }
+        
+        // Keyboard controls
+        const keys = {
+            w: false,
+            s: false,
+            ArrowUp: false,
+            ArrowDown: false
+        };
+        
+        function keyDownHandler(e) {
+            if (e.key in keys) {
+                keys[e.key] = true;
+                e.preventDefault();
+            }
+            
+            // Pause game when spacebar is pressed
+            if (e.code === 'Space' && gameRunning) {
+                togglePause();
+                e.preventDefault();
+            }
+        }
+        
+        function keyUpHandler(e) {
+            if (e.key in keys) {
+                keys[e.key] = false;
+                e.preventDefault();
+            }
+        }
+        
+        // Toggle pause state
+        function togglePause() {
+            gamePaused = !gamePaused;
+            
+            // Show/hide pause message
+            const pauseMessage = document.getElementById('pauseMessage');
+            pauseMessage.style.display = gamePaused ? 'flex' : 'none';
+            
+            // Handle music
+            if (soundEnabled) {
+                if (gamePaused) {
+                    document.getElementById('gameMusic').pause();
+                    musicPlaying = false;
+                } else {
+                    document.getElementById('gameMusic').play().catch(error => {
+                        // Auto-play might be blocked, do nothing
+                    });
+                    musicPlaying = true;
+                }
+            }
+        }
+        
+        // AI paddle movement
+        function moveAI() {
+            if (!gameRunning || gamePaused) return;
+            
+            // Only move if ball is moving toward AI (right side)
+            if (ballSpeedX > 0) {
+                const paddleCenterY = player2Y + PADDLE_HEIGHT / 2;
+                const targetY = ballY;
+                let aiSpeed;
+                
+                // Set AI difficulty speeds
+                switch(aiDifficulty) {
+                    case 'easy':
+                        aiSpeed = 3;
+                        // Add some randomness/imperfection to easy AI
+                        if (Math.random() > 0.7) return;
+                        break;
+                    case 'medium':
+                        aiSpeed = 5;
+                        break;
+                    case 'hard':
+                        aiSpeed = 7;
+                        break;
+                    default:
+                        aiSpeed = 5;
+                }
+                
+                // Move AI paddle towards the ball
+                if (paddleCenterY < targetY - 10) {
+                    player2Y += aiSpeed;
+                } else if (paddleCenterY > targetY + 10) {
+                    player2Y -= aiSpeed;
+                }
+                
+                // Ensure AI paddle stays within bounds
+                if (player2Y < 0) {
+                    player2Y = 0;
+                } else if (player2Y > canvas.height - PADDLE_HEIGHT) {
+                    player2Y = canvas.height - PADDLE_HEIGHT;
+                }
+            }
+        }
+        
+        // Paddle movement
+        function movePaddles() {
+            if (!gameRunning || gamePaused) return;
+            
+            const paddleSpeed = 8;
+            
+            // Player 1 (W/S keys)
+            if (keys.w && player1Y > 0) {
+                player1Y -= paddleSpeed;
+            }
+            if (keys.s && player1Y < canvas.height - PADDLE_HEIGHT) {
+                player1Y += paddleSpeed;
+            }
+            
+            // Player 2 (Arrow keys) - only if AI mode is off
+            if (!aiMode) {
+                if (keys.ArrowUp && player2Y > 0) {
+                    player2Y -= paddleSpeed;
+                }
+                if (keys.ArrowDown && player2Y < canvas.height - PADDLE_HEIGHT) {
+                    player2Y += paddleSpeed;
+                }
+            } else {
+                // Move the AI paddle
+                moveAI();
+            }
+        }
+        
+        // Score animation functions
+        function triggerScoreAnimation(player) {
+            scoreAnimations[player].active = true;
+            scoreAnimations[player].opacity = 1;
+            scoreAnimations[player].y = 0;
+        }
+        
+        function updateScoreAnimations() {
+            // Update player 1 score animation
+            if (scoreAnimations.player1.active) {
+                scoreAnimations.player1.y += 1.5;
+                scoreAnimations.player1.opacity -= 0.02;
+                
+                if (scoreAnimations.player1.opacity <= 0) {
+                    scoreAnimations.player1.active = false;
+                }
+            }
+            
+            // Update player 2 score animation
+            if (scoreAnimations.player2.active) {
+                scoreAnimations.player2.y += 1.5;
+                scoreAnimations.player2.opacity -= 0.02;
+                
+                if (scoreAnimations.player2.opacity <= 0) {
+                    scoreAnimations.player2.active = false;
+                }
+            }
+        }
+        
+        // Apply theme and update UI to reflect current settings
+        function applyTheme() {
+            const theme = themes[currentTheme];
+            
+            // Update canvas style
+            canvas.style.backgroundColor = theme.background;
+            document.querySelector('.score-display').style.textShadow = theme.glow;
+            
+            // Apply paddle colors in custom properties for visual UI representation
+            document.documentElement.style.setProperty('--p1-color', paddleColors[player1PaddleColor]);
+            document.documentElement.style.setProperty('--p2-color', paddleColors[player2PaddleColor]);
+        }
+        
+        // Initialize customization controls
+        function initCustomControls() {
+            // Theme selector
+            document.getElementById('theme-select').addEventListener('change', (e) => {
+                currentTheme = e.target.value;
+                applyTheme();
+            });
+            
+            // Paddle color selectors
+            document.getElementById('p1-color').addEventListener('change', (e) => {
+                player1PaddleColor = e.target.value;
+                applyTheme();
+            });
+            
+            document.getElementById('p2-color').addEventListener('change', (e) => {
+                player2PaddleColor = e.target.value;
+                applyTheme();
+            });
+            
+            // AI mode toggle
+            document.getElementById('ai-mode').addEventListener('change', (e) => {
+                aiMode = e.target.checked;
+                
+                // Use our state management function to properly set disabled state
+                updateAIControlsState();
+                
+                // If turning AI mode off during game, reset ball to avoid unfair advantage
+                if (!aiMode && gameRunning && !gamePaused) {
+                    resetBall();
+                }
+                
+                // Update touch controls visibility if on mobile
+                if (touchControlsActive) {
+                    updateTouchControlsVisibility();
+                }
+            });
+            
+            // AI difficulty selector
+            document.getElementById('ai-difficulty').addEventListener('change', (e) => {
+                aiDifficulty = e.target.value;
+            });
+            
+            // Initialize AI mode controls
+            document.getElementById('ai-difficulty').disabled = !aiMode;
+            
+            // Apply initial theme
+            applyTheme();
+        }
+        
+        // Function to update AI control states based on game state
+        function updateAIControlsState() {
+            const aiModeToggle = document.getElementById('ai-mode');
+            const aiDifficultySelect = document.getElementById('ai-difficulty');
+            
+            // Disable AI toggle and difficulty during active gameplay
+            if (gameRunning && !gamePaused && (player1Score > 0 || player2Score > 0)) {
+                aiModeToggle.disabled = true;
+                aiModeToggle.parentElement.title = "AI mode can only be changed before a game starts or after it ends";
+                
+                // Also disable difficulty selector during gameplay
+                aiDifficultySelect.disabled = !aiMode ? true : true; // Always disable during gameplay
+                aiDifficultySelect.title = "Difficulty can only be changed before a game starts or after it ends";
+            } else {
+                aiModeToggle.disabled = false;
+                aiModeToggle.parentElement.title = "";
+                
+                // Only enable difficulty selector if AI mode is on
+                aiDifficultySelect.disabled = !aiMode;
+                aiDifficultySelect.title = "";
+            }
+        }
+        
+        // Update paddle positions based on key states
+        setInterval(movePaddles, 16);
+        
+        // Start the game when page loads
+        window.onload = () => {
+            init();
+            initCustomControls();
+            updateAIControlsState(); // Set initial state of AI controls
+        };
+    </script>
+</body>
+</html>
